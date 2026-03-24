@@ -31,8 +31,6 @@ interface QuestWithStats extends QuestInfo {
   milestoneCount: number
   poolBalance: bigint
   completedCount: number
-  totalReward: bigint
-  earnedReward: bigint
   isOwned: boolean
 }
 
@@ -40,6 +38,7 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
   const { connected, connect, shortAddress, address } = useWallet()
   const [filter, setFilter] = useState<"all" | "owned" | "enrolled">("all")
   const [quests, setQuests] = useState<QuestWithStats[]>([])
+  const [totalEarnings, setTotalEarnings] = useState<bigint>(0n)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,54 +47,42 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
     setLoading(true)
     setError(null)
     try {
-      const count = await questClient.getQuestCount()
-      const fetchedQuests: QuestWithStats[] = []
+      // 1. Fetch total user earnings in a single call (Maintainer feedback)
+      const earnings = await rewardsClient.getUserEarnings(address)
+      setTotalEarnings(earnings)
 
-      for (let i = 0; i < count; i++) {
-        const quest = await questClient.getQuest(i)
-        if (!quest) continue
+      // 2. Fetch all quests 
+      const allQuests = await questClient.getQuests()
+      
+      // 3. Parallelize fetching of stats for relevant quests to solve N+1 Problem (Maintainer feedback)
+      const questStatsPromises = allQuests.map(async (q) => {
+        const isOwned = q.owner === address
+        const isEnrolled = await questClient.isEnrollee(q.id, address)
+        
+        if (!isOwned && !isEnrolled) return null
 
-        const [
-          enrollees,
-          milestoneCount,
-          poolBalance,
-          milestones,
-          completedCount,
-        ] = await Promise.all([
-          questClient.getEnrollees(i),
-          milestoneClient.getMilestoneCount(i),
-          rewardsClient.getPoolBalance(i),
-          milestoneClient.getMilestones(i),
-          milestoneClient.getEnrolleeCompletions(i, address),
+        const [enrollees, milestoneCount, poolBalance, completedCount] = await Promise.all([
+          questClient.getEnrollees(q.id),
+          milestoneClient.getMilestoneCount(q.id),
+          rewardsClient.getPoolBalance(q.id),
+          milestoneClient.getEnrolleeCompletions(q.id, address),
         ])
 
-        const isEnrolled = await questClient.isEnrollee(i, address)
-        const isOwned = quest.owner === address
-
-        // Filter based on relevance to user
-        if (!isOwned && !isEnrolled) continue
-
-        const totalReward = milestones.reduce((sum, m) => sum + m.rewardAmount, 0n)
-        
-        // Estimation of earned rewards
-        const earnedReward = completedCount > 0 ? (totalReward * BigInt(completedCount)) / BigInt(milestoneCount || 1) : 0n
-
-        fetchedQuests.push({
-          ...quest,
+        return {
+          ...q,
           enrolleeCount: enrollees.length,
           milestoneCount,
           poolBalance,
           completedCount,
-          totalReward,
-          earnedReward,
           isOwned,
-        })
-      }
+        } as QuestWithStats
+      })
 
-      setQuests(fetchedQuests)
-    } catch (err) {
-      console.error("Failed to fetch quests:", err)
-      setError("Failed to load quests from the network.")
+      const results = await Promise.all(questStatsPromises)
+      setQuests(results.filter((q): q is QuestWithStats => q !== null))
+    } catch (err: unknown) {
+      console.error("Failed to fetch dashboard data:", err)
+      setError("Failed to load dashboard data from the network.")
     } finally {
       setLoading(false)
     }
@@ -110,17 +97,9 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
   if (!connected) {
     return (
       <div className="min-h-[calc(100vh-67px)] flex items-center justify-center relative overflow-hidden">
-        {/* Background elements */}
         <div className="absolute inset-0 bg-grid-dots pointer-events-none" />
-        <div className="absolute top-[10%] left-[8%] w-20 h-20 bg-primary border-[3px] border-black shadow-[4px_4px_0_#000] rotate-12 opacity-[0.08] animate-float" style={{ animationDuration: "8s" }} />
-        <div className="absolute bottom-[15%] right-[6%] w-14 h-14 bg-primary border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-6 opacity-[0.1] animate-float" style={{ animationDuration: "6s", animationDelay: "1s" }} />
-        <div className="absolute top-[60%] left-[5%] w-10 h-10 bg-success border-[2px] border-black shadow-[2px_2px_0_#000] rotate-45 opacity-[0.06] animate-float" style={{ animationDuration: "7s", animationDelay: "2s" }} />
-        <div className="absolute top-[20%] right-[12%] w-8 h-8 bg-primary border-[2px] border-black opacity-[0.07] -rotate-12 animate-float" style={{ animationDuration: "9s", animationDelay: "0.5s" }} />
-
         <div className="relative px-4 max-w-lg mx-auto">
-          {/* Card container */}
           <div className="bg-white border-[3px] border-black shadow-[8px_8px_0_#000] overflow-hidden animate-scale-in">
-            {/* Yellow header strip */}
             <div className="bg-primary border-b-[3px] border-black px-6 py-3 flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider">Dashboard</span>
               <div className="flex items-center gap-1.5">
@@ -128,7 +107,6 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
                 <span className="text-xs font-bold">Not Connected</span>
               </div>
             </div>
-
             <div className="p-8 sm:p-10 text-center">
               <div className="w-20 h-20 bg-primary border-[3px] border-black shadow-[4px_4px_0_#000] flex items-center justify-center mb-6 mx-auto animate-fade-in-up">
                 <Wallet className="h-8 w-8" />
@@ -137,14 +115,9 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
                 Connect your wallet
               </h2>
               <p className="text-muted-foreground mb-8 max-w-sm mx-auto animate-fade-in-up stagger-2">
-                Connect your Freighter wallet to view your quests, track your
-                progress, and start earning USDC.
+                Connect your Freighter wallet to view your quests, track your progress, and start earning USDC.
               </p>
-              <Button
-                size="lg"
-                onClick={connect}
-                className="shimmer-on-hover animate-fade-in-up stagger-3"
-              >
+              <Button size="lg" onClick={connect} className="shimmer-on-hover animate-fade-in-up stagger-3">
                 <Wallet className="h-4 w-4" />
                 Connect Wallet
               </Button>
@@ -155,7 +128,6 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
     )
   }
 
-  // Apply filter
   const filteredQuests = quests.filter((q) => {
     if (filter === "owned") return q.isOwned
     if (filter === "enrolled") return !q.isOwned
@@ -164,7 +136,6 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
 
   return (
     <div className="relative mx-auto max-w-6xl px-4 sm:px-6 py-8">
-      {/* Welcome banner */}
       <div className="relative bg-primary border-[3px] border-black shadow-[6px_6px_0_#000] p-6 sm:p-8 mb-8 overflow-hidden animate-fade-in-up">
         <div className="absolute inset-0 bg-diagonal-lines pointer-events-none opacity-30" />
         <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -176,9 +147,15 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
             <h1 className="text-3xl sm:text-4xl font-black">
               {shortAddress}
             </h1>
-            <p className="text-sm font-bold opacity-70 mt-1">
-              You have {quests.length} active quests
-            </p>
+            <div className="flex items-center gap-4 mt-2">
+               <p className="text-xs font-bold opacity-70">
+                 {quests.length} active quests
+               </p>
+               <div className="h-4 w-px bg-black/20" />
+               <p className="text-sm font-black text-green-800">
+                 {formatTokens(Number(totalEarnings))} USDC earned
+               </p>
+            </div>
           </div>
           <Button
             variant="secondary"
@@ -191,7 +168,6 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
         </div>
       </div>
 
-      {/* Quest filters + heading */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 relative">
         <h2 className="text-xl font-black">Your Quests</h2>
         <div className="flex gap-0 border-[2px] border-black shadow-[3px_3px_0_#000]">
@@ -200,9 +176,7 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
               key={f}
               onClick={() => setFilter(f)}
               className={`px-4 py-2 text-xs font-black uppercase tracking-wider transition-colors capitalize cursor-pointer border-r-[2px] border-black last:border-r-0 ${
-                filter === f
-                  ? "bg-primary"
-                  : "bg-white hover:bg-secondary"
+                filter === f ? "bg-primary" : "bg-white hover:bg-secondary"
               }`}
             >
               {f}
@@ -214,7 +188,7 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
           <Loader2 className="h-10 w-10 animate-spin mb-4" />
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Loading on-chain data...</p>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Optimizing network queries...</p>
         </div>
       ) : error ? (
         <Card className="border-destructive/50 bg-destructive/5 animate-shake">
@@ -242,13 +216,12 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
                       <CardTitle className="text-base group-hover:text-primary transition-colors">
                         {q.name}
                       </CardTitle>
-                      {q.completedCount === q.milestoneCount &&
-                        q.milestoneCount > 0 && (
-                          <Badge variant="success" className="gap-1">
-                            <Sparkles className="h-3 w-3" />
-                            Complete
-                          </Badge>
-                        )}
+                      {q.completedCount === q.milestoneCount && q.milestoneCount > 0 && (
+                        <Badge variant="success" className="gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Complete
+                        </Badge>
+                      )}
                       <Badge variant={q.isOwned ? "default" : "secondary"} className="text-[10px]">
                         {q.isOwned ? "Owner" : "Enrolled"}
                       </Badge>
@@ -274,20 +247,16 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
                   </Badge>
                   <Badge variant="default" className="gap-1 border-black border">
                     <Coins className="h-3 w-3" />
-                    {formatTokens(Number(q.poolBalance))} USDC
+                    {formatTokens(Number(q.poolBalance))} USDC Pooled
                   </Badge>
                 </div>
 
                 {q.milestoneCount > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <Progress
-                        value={q.completedCount}
-                        max={q.milestoneCount}
-                        className="flex-1"
-                      />
+                      <Progress value={q.completedCount} max={q.milestoneCount} className="flex-1" />
                       <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">
-                        {q.completedCount}/{q.milestoneCount}
+                        {q.completedCount}/{q.milestoneCount} Done
                       </span>
                     </div>
                   </div>
@@ -305,13 +274,6 @@ export function Dashboard({ onSelectWorkspace }: DashboardProps) {
                 <h3 className="font-black text-lg mb-2">
                   {filter === "all" ? "No quests yet" : `No ${filter} quests`}
                 </h3>
-                <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                  {filter === "all"
-                    ? "Create your first quest to start incentivizing learning with on-chain rewards."
-                    : filter === "owned"
-                      ? "You haven't created any quests yet. Start one to incentivize learners."
-                      : "You haven't enrolled in any quests yet. Browse available quests to get started."}
-                </p>
               </CardContent>
             </Card>
           )}

@@ -3,11 +3,11 @@ import {
   Contract, 
   nativeToScVal, 
   scValToNative, 
-  xdr,
   TransactionBuilder,
   Keypair,
   Account
 } from "@stellar/stellar-sdk";
+import type { xdr } from "@stellar/stellar-sdk";
 import { server, signAndSubmit, NETWORK_PASSPHRASE } from "./client";
 
 const CONTRACT_ID = import.meta.env.VITE_QUEST_CONTRACT_ID || "";
@@ -88,10 +88,14 @@ export class QuestClient {
     return signAndSubmit(tx);
   }
 
-  async enroll(user: string, questId: number) {
-    const tx = await this.buildTx(user, "enroll", [
-       nativeToScVal(questId, { type: "u32" }),
-       new Address(user).toScVal()
+  /**
+   * Adds an enrollee to a quest. 
+   * Note: This must be signed by the QUEST OWNER, not the enrollee.
+   */
+  async addEnrollee(owner: string, questId: number, enrollee: string) {
+    const tx = await this.buildTx(owner, "add_enrollee", [
+      nativeToScVal(questId, { type: "u32" }),
+      new Address(enrollee).toScVal()
     ]);
     return signAndSubmit(tx);
   }
@@ -116,7 +120,7 @@ export class QuestClient {
       if (response && "result" in response && response.result) {
          return scValToNative(response.result.retval);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(`Read error ${method}:`, e);
     }
     return null;

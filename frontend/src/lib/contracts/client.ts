@@ -21,7 +21,7 @@ export interface TransactionResult {
 /**
  * Common helper to wait for transaction completion
  */
-export async function pollTransaction(txHash: string): Promise<any> {
+export async function pollTransaction(txHash: string): Promise<rpc.Api.GetTransactionResponse> {
   let response = await server.getTransaction(txHash);
   
   while (response.status === "NOT_FOUND") {
@@ -37,23 +37,25 @@ export async function pollTransaction(txHash: string): Promise<any> {
  */
 export async function signAndSubmit(tx: Transaction): Promise<TransactionResult> {
   try {
-    const result: any = await signTransaction(tx.toXDR(), {
+    const result = await signTransaction(tx.toXDR(), {
       networkPassphrase: NETWORK_PASSPHRASE,
     });
     
-    if (result && result.signedTxXdr) {
+    if (typeof result === "object" && result !== null && "signedTxXdr" in result) {
       const { signedTxXdr } = result;
-      // Use Transaction constructor with bypass to avoid SDK 14 strict type issues
-      const submitResponse = await server.sendTransaction(new Transaction(signedTxXdr as any, NETWORK_PASSPHRASE));
+      // Convert to Transaction Envelope XDR string for safety
+      const submitResponse = await server.sendTransaction(new Transaction(signedTxXdr as string, NETWORK_PASSPHRASE));
       
-      if (submitResponse.status === "PENDING" || (submitResponse as any).status === "SUCCESS") {
+      // The sendTransaction status was wrongly check for SUCCESS previously.
+      // Accurate statuses: PENDING | DUPLICATE | TRY_AGAIN_LATER | ERROR
+      if (submitResponse.status === "PENDING") {
         const pollResponse = await pollTransaction(submitResponse.hash);
         
         if (pollResponse.status === "SUCCESS") {
           return {
             status: "SUCCESS",
             txHash: submitResponse.hash,
-            resultXdr: (pollResponse as any).resultXdr,
+            resultXdr: (pollResponse as rpc.Api.GetTransactionResponse & { resultXdr: string }).resultXdr,
           };
         } else {
           return {
@@ -66,7 +68,7 @@ export async function signAndSubmit(tx: Transaction): Promise<TransactionResult>
         return {
           status: "FAILED",
           txHash: submitResponse.hash,
-          error: "Submission failed",
+          error: `Submission failed: ${submitResponse.status}`,
         };
       }
     } else {
@@ -76,12 +78,13 @@ export async function signAndSubmit(tx: Transaction): Promise<TransactionResult>
          error: "Signing failed"
        };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Transaction submission error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error during signing/submission";
     return {
       status: "FAILED",
       txHash: "",
-      error: err.message || "Unknown error during signing/submission",
+      error: message,
     };
   }
 }
