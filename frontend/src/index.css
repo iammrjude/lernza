@@ -38,20 +38,27 @@
 }
 
 /* ── Dark mode token overrides ────────────────────────────────────────────── */
-
+/*
+  Pure neo-brutalist dark: yellow borders and shadows on near-black bg.
+  --color-border: #FACC15 means ALL border-border utilities (which resolve
+  to var(--color-border)) become yellow in dark mode — sharp and visible
+  against the dark background, including hardcoded shadow-[N_N_0_#000]
+  usages on cards, buttons, and nav elements throughout the pages.
+  Card bg is one step lighter than page bg so cards read as distinct surfaces.
+*/
 .dark {
-  --color-background: #0F0F0F;
-  --color-foreground: #F5F5F4;
-  --color-primary: #FACC15;          
+  --color-background: #111110;
+  --color-foreground: #F5F0E8;
+  --color-primary: #FACC15;
   --color-primary-foreground: #000000;
   --color-secondary: #1C1917;
-  --color-secondary-foreground: #F5F5F4;
+  --color-secondary-foreground: #F5F0E8;
   --color-muted: #292524;
   --color-muted-foreground: #A8A29E;
-  --color-card: #1A1A1A;
-  --color-card-foreground: #F5F5F4;
-  --color-border: #F5F5F4;            
-  --color-input: #F5F5F4;
+  --color-card: #1C1917;
+  --color-card-foreground: #F5F0E8;
+  --color-border: #FACC15;
+  --color-input: #FACC15;
   --color-ring: #FACC15;
   --color-accent: #FACC15;
   --color-accent-foreground: #000000;
@@ -63,26 +70,42 @@
   --color-warning-foreground: #000000;
 }
 
-
-
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
-  transition-duration: 100ms;
+/* ── Smooth theme transition — scoped, not global * ──────────────────────── */
+/*
+  Targeting only the structural/surface elements that actually change color
+  on theme switch. Avoids the page-load flash and performance cost of
+  transitioning every single DOM node.
+*/
+body,
+header,
+footer,
+main,
+[class*="bg-background"],
+[class*="bg-card"],
+[class*="bg-secondary"],
+[class*="bg-muted"],
+[class*="text-foreground"],
+[class*="text-card-foreground"],
+[class*="text-muted-foreground"],
+[class*="border-border"],
+[class*="border-border"] {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 250ms;
   transition-timing-function: ease;
 }
 
-
+/* Keep interactive and animation classes snappy */
 .neo-press,
 .neo-lift,
 .card-tilt,
+.shimmer-on-hover,
 .shimmer-on-hover::after,
-[class*="animate-"] {
+[class*="animate-"],
+[class*="reveal-"] {
   transition-property: translate, transform, opacity, box-shadow;
 }
 
-
+/* ── Keyframes ── */
 
 @keyframes fade-in {
   from { opacity: 0; }
@@ -286,7 +309,7 @@
 }
 
 .dark .bg-grid-dots {
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(250, 204, 21, 0.08) 1px, transparent 1px);
 }
 
 .bg-diagonal-lines {
@@ -304,8 +327,8 @@
     -45deg,
     transparent,
     transparent 8px,
-    rgba(255, 255, 255, 0.03) 8px,
-    rgba(255, 255, 255, 0.03) 9px
+    rgba(250, 204, 21, 0.04) 8px,
+    rgba(250, 204, 21, 0.04) 9px
   );
 }
 
@@ -359,20 +382,12 @@ body {
 
 .card-tilt:hover {
   transform: perspective(800px) rotateX(2deg) rotateY(-3deg) translateY(-6px);
-  box-shadow: 10px 10px 0 #000;
-}
-
-.dark .card-tilt:hover {
-  box-shadow: 10px 10px 0 var(--color-foreground);
+  box-shadow: 10px 10px 0 var(--color-border);
 }
 
 .card-tilt:active {
   transform: perspective(800px) rotateX(0) rotateY(0) translateY(0);
-  box-shadow: 3px 3px 0 #000;
-}
-
-.dark .card-tilt:active {
-  box-shadow: 3px 3px 0 var(--color-foreground);
+  box-shadow: 3px 3px 0 var(--color-border);
 }
 
 /* ── Stagger animation delays ── */
@@ -456,7 +471,7 @@ body {
   width: 0;
   height: 4px;
   background: var(--color-primary);
-  border: 1px solid black;
+  border: 1px solid var(--color-border);
   transition: width 0.4s ease-out;
 }
 
@@ -475,8 +490,8 @@ body {
 .step-line {
   height: 3px;
   background: var(--color-primary);
-  border-top: 1.5px solid black;
-  border-bottom: 1.5px solid black;
+  border-top: 1.5px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
 }
 
 .step-line.in-view {

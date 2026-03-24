@@ -34,9 +34,7 @@ type Tab = "milestones" | "enrollees"
 
 export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>("milestones")
-  const [expandedMilestone, setExpandedMilestone] = useState<number | null>(
-    null
-  )
+  const [expandedMilestone, setExpandedMilestone] = useState<number | null>(null)
 
   const ws = MOCK_WORKSPACES.find((w) => w.id === workspaceId)
   const milestones = MOCK_MILESTONES[workspaceId] || []
@@ -53,9 +51,7 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
   const isComplete =
     completedMilestones === milestones.length && milestones.length > 0
   const earnedReward = milestones
-    .filter((m) =>
-      completions.some((c) => c.milestoneId === m.id && c.completed)
-    )
+    .filter((m) => completions.some((c) => c.milestoneId === m.id && c.completed))
     .reduce((sum, m) => sum + m.rewardAmount, 0)
 
   const enrolleesCount = useCountUp(enrollees.length, 400, statsInView)
@@ -84,16 +80,16 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
         onClick={onBack}
         className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground mb-6 transition-colors cursor-pointer group"
       >
-        <div className="w-7 h-7 border-2 border-black bg-white shadow-[2px_2px_0_#000] flex items-center justify-center neo-press hover:shadow-[3px_3px_0_#000] active:shadow-[1px_1px_0_#000] group-hover:bg-primary transition-colors">
+        <div className="w-7 h-7 border-2 border-border bg-background shadow-[2px_2px_0_var(--color-border)] flex items-center justify-center neo-press hover:shadow-[3px_3px_0_var(--color-border)] active:shadow-[1px_1px_0_var(--color-border)] group-hover:bg-primary transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" />
         </div>
         Back to Dashboard
       </button>
 
       {/* Quest header card */}
-      <div className="relative bg-white border-[3px] border-black shadow-[6px_6px_0_#000] overflow-hidden mb-8 animate-fade-in-up">
+      <div className="relative bg-card text-card-foreground border-[3px] border-border shadow-[6px_6px_0_var(--color-border)] overflow-hidden mb-8 animate-fade-in-up">
         {/* Header bar */}
-        <div className="bg-primary border-b-[3px] border-black px-6 py-3 flex items-center justify-between">
+        <div className="bg-primary border-b-[3px] border-border px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xs font-black uppercase tracking-wider">
               Quest Details
@@ -106,7 +102,7 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 bg-success border border-black" />
+            <div className="w-2.5 h-2.5 bg-success border border-border" />
             <span className="text-xs font-bold">Live</span>
           </div>
         </div>
@@ -137,40 +133,20 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
       {/* Stats row */}
       <div ref={statsRef} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
-          {
-            icon: Users,
-            label: "Enrollees",
-            value: enrolleesCount,
-            bg: "bg-primary",
-          },
-          {
-            icon: Target,
-            label: "Milestones",
-            value: milestonesCount,
-            bg: "bg-primary",
-          },
-          {
-            icon: Coins,
-            label: "Pool Balance",
-            value: formatTokens(poolBalance),
-            bg: "bg-primary",
-          },
-          {
-            icon: Coins,
-            label: "Total Rewards",
-            value: formatTokens(totalRewardCount),
-            bg: "bg-success",
-          },
+          { icon: Users,  label: "Enrollees",     value: enrolleesCount,              bg: "bg-primary" },
+          { icon: Target, label: "Milestones",     value: milestonesCount,             bg: "bg-primary" },
+          { icon: Coins,  label: "Pool Balance",   value: formatTokens(poolBalance),   bg: "bg-primary" },
+          { icon: Coins,  label: "Total Rewards",  value: formatTokens(totalRewardCount), bg: "bg-success" },
         ].map((stat, i) => (
           <div
             key={stat.label}
             className={`reveal-up ${statsInView ? "in-view" : ""}`}
             style={{ transitionDelay: `${i * 100}ms` }}
           >
-            <Card className="neo-lift hover:shadow-[7px_7px_0_#000] active:shadow-[2px_2px_0_#000]">
+            <Card className="neo-lift hover:shadow-[7px_7px_0_var(--color-border)] active:shadow-[2px_2px_0_var(--color-border)]">
               <CardContent className="p-4 flex items-center gap-3">
                 <div
-                  className={`w-10 h-10 ${stat.bg} border-2 border-black shadow-[2px_2px_0_#000] flex items-center justify-center shrink-0`}
+                  className={`w-10 h-10 ${stat.bg} border-2 border-border shadow-[2px_2px_0_var(--color-border)] flex items-center justify-center shrink-0`}
                 >
                   <stat.icon className="h-4 w-4" />
                 </div>
@@ -191,12 +167,12 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
       {/* Progress section */}
       {milestones.length > 0 && (
         <div className="mb-8 animate-fade-in-up stagger-3">
-          <div className="bg-white border-[3px] border-black shadow-[4px_4px_0_#000] p-5">
+          <div className="bg-card text-card-foreground border-[3px] border-border shadow-[4px_4px_0_var(--color-border)] p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-black">Overall Progress</span>
               <div className="flex items-center gap-3">
                 {earnedReward > 0 && (
-                  <span className="text-xs font-bold text-green-700">
+                  <span className="text-xs font-bold text-success">
                     +{formatTokens(earnedReward)} USDC earned
                   </span>
                 )}
@@ -211,14 +187,14 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-0 border-b-[3px] border-black mb-6" ref={contentRef}>
+      <div className="flex gap-0 border-b-[3px] border-border mb-6" ref={contentRef}>
         {(["milestones", "enrollees"] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-6 py-3 text-sm font-black  tracking-wider border-[3px] border-b-0 transition-all capitalize cursor-pointer -mb-0.75 ${
+            className={`px-6 py-3 text-sm font-black tracking-wider border-[3px] border-b-0 transition-all capitalize cursor-pointer -mb-0.75 ${
               activeTab === tab
-                ? "border-black bg-primary shadow-[2px_-2px_0_#000]"
+                ? "border-border bg-primary shadow-[2px_-2px_0_var(--color-border)]"
                 : "border-transparent hover:bg-secondary"
             }`}
           >
@@ -236,7 +212,7 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
           {milestones.length === 0 ? (
             <Card className="animate-fade-in-up">
               <CardContent className="flex flex-col items-center py-12 text-center">
-                <div className="w-14 h-14 bg-primary border-[3px] border-black shadow-[4px_4px_0_#000] flex items-center justify-center mb-4">
+                <div className="w-14 h-14 bg-primary border-[3px] border-border shadow-[4px_4px_0_var(--color-border)] flex items-center justify-center mb-4">
                   <Target className="h-6 w-6" />
                 </div>
                 <h3 className="font-black mb-2">No milestones yet</h3>
@@ -266,18 +242,16 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
                   style={{ transitionDelay: `${i * 100}ms` }}
                 >
                   <Card
-                    className={`neo-lift hover:shadow-[7px_7px_0_#000] active:shadow-[2px_2px_0_#000] cursor-pointer group transition-all ${
+                    className={`neo-lift hover:shadow-[7px_7px_0_var(--color-border)] active:shadow-[2px_2px_0_var(--color-border)] cursor-pointer group transition-all ${
                       isCompleted ? "border-success" : ""
                     }`}
-                    onClick={() =>
-                      setExpandedMilestone(isExpanded ? null : ms.id)
-                    }
+                    onClick={() => setExpandedMilestone(isExpanded ? null : ms.id)}
                   >
                     <CardContent className="p-5">
                       <div className="flex items-start gap-4">
                         <div
-                          className={`w-8 h-8 border-2 border-black shadow-[2px_2px_0_#000] flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 ${
-                            isCompleted ? "bg-success" : "bg-white group-hover:bg-secondary"
+                          className={`w-8 h-8 border-2 border-border shadow-[2px_2px_0_var(--color-border)] flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 ${
+                            isCompleted ? "bg-success" : "bg-background group-hover:bg-secondary"
                           }`}
                         >
                           {isCompleted ? (
@@ -288,15 +262,11 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-3">
-                            <h3
-                              className={`font-black ${isCompleted ? "text-muted-foreground" : ""}`}
-                            >
+                            <h3 className={`font-black ${isCompleted ? "text-muted-foreground" : ""}`}>
                               {ms.title}
                             </h3>
                             <div className="flex items-center gap-2 shrink-0">
-                              <Badge
-                                variant={isCompleted ? "success" : "default"}
-                              >
+                              <Badge variant={isCompleted ? "success" : "default"}>
                                 {ms.rewardAmount} USDC
                               </Badge>
                               {isExpanded ? (
@@ -322,7 +292,7 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
                                     {completedBy.map((addr) => (
                                       <span
                                         key={addr}
-                                        className="text-xs font-mono font-bold bg-success/10 border-[1.5px] border-black px-2 py-1 shadow-[1px_1px_0_#000]"
+                                        className="text-xs font-mono font-bold bg-success/10 border-[1.5px] border-border px-2 py-1 shadow-[1px_1px_0_var(--color-border)]"
                                       >
                                         {addr}
                                       </span>
@@ -360,7 +330,7 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
           {enrollees.length === 0 ? (
             <Card className="animate-fade-in-up">
               <CardContent className="flex flex-col items-center py-12 text-center">
-                <div className="w-14 h-14 bg-primary border-[3px] border-black shadow-[4px_4px_0_#000] flex items-center justify-center mb-4">
+                <div className="w-14 h-14 bg-primary border-[3px] border-border shadow-[4px_4px_0_var(--color-border)] flex items-center justify-center mb-4">
                   <Users className="h-6 w-6" />
                 </div>
                 <h3 className="font-black mb-2">No enrollees yet</h3>
@@ -381,10 +351,7 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
               const earned = milestones
                 .filter((m) =>
                   completions.some(
-                    (c) =>
-                      c.enrollee === addr &&
-                      c.milestoneId === m.id &&
-                      c.completed
+                    (c) => c.enrollee === addr && c.milestoneId === m.id && c.completed
                   )
                 )
                 .reduce((sum, m) => sum + m.rewardAmount, 0)
@@ -397,11 +364,11 @@ export function WorkspaceView({ workspaceId, onBack }: WorkspaceViewProps) {
                   className={`reveal-up ${contentInView ? "in-view" : ""}`}
                   style={{ transitionDelay: `${i * 100}ms` }}
                 >
-                  <Card className="neo-lift hover:shadow-[7px_7px_0_#000] active:shadow-[2px_2px_0_#000] group">
+                  <Card className="neo-lift hover:shadow-[7px_7px_0_var(--color-border)] active:shadow-[2px_2px_0_var(--color-border)] group">
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary border-2 border-black shadow-[2px_2px_0_#000] flex items-center justify-center text-sm font-mono font-black group-hover:shadow-[3px_3px_0_#000] transition-shadow">
+                          <div className="w-10 h-10 bg-primary border-2 border-border shadow-[2px_2px_0_var(--color-border)] flex items-center justify-center text-sm font-mono font-black group-hover:shadow-[3px_3px_0_var(--color-border)] transition-shadow">
                             {addr.slice(0, 2)}
                           </div>
                           <div>

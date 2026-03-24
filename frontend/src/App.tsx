@@ -27,20 +27,13 @@ export function useTheme() {
 }
 
 function getInitialTheme(): Theme {
-  // 1. Check persisted preference
   try {
     const stored = localStorage.getItem("lernza-theme")
     if (stored === "dark" || stored === "light") return stored
-  }catch (_:unknown) {
-        console.error(_)
-      }
-  // 2. Fall back to system preference
-  try {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-  } catch (_:unknown) {
-        console.error(_)
-      }
-  return "light"
+  } catch {
+    return "light"
+  }
 }
 
 // ─── Routing ───────────────────────────────────────────────────────────────────
@@ -50,11 +43,14 @@ type Page = (typeof VALID_PAGES)[number] | "workspace" | "404"
 
 function pathToPage(pathname: string): { page: Page; workspaceId: number | null } {
   const clean = pathname.replace(/\/+$/, "") || "/"
+
   if (clean === "/") return { page: "landing", workspaceId: null }
   if (clean === "/dashboard") return { page: "dashboard", workspaceId: null }
   if (clean === "/profile") return { page: "profile", workspaceId: null }
+
   const wsMatch = clean.match(/^\/workspace\/(\d+)$/)
   if (wsMatch) return { page: "workspace", workspaceId: Number(wsMatch[1]) }
+
   return { page: "404", workspaceId: null }
 }
 
@@ -70,38 +66,15 @@ function App() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [state, setState] = useState(() => pathToPage(window.location.pathname))
 
-  // Apply theme class to <html> and persist
+  // Apply .dark class to <html> and persist preference
   useEffect(() => {
-    const root = document.documentElement
-    if (theme === "dark") {
-      root.classList.add("dark")
-    } else {
-      root.classList.remove("dark")
-    }
+    document.documentElement.classList.toggle("dark", theme === "dark")
     try {
       localStorage.setItem("lernza-theme", theme)
-    } catch (_:unknown) {
-        console.error(_)
-      }
-  }, [theme])
-
-  // Listen for system preference changes (when no stored preference)
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const handleChange = (e: MediaQueryListEvent) => {
-      try {
-        const stored = localStorage.getItem("lernza-theme")
-        // Only follow system changes if user hasn't explicitly set a preference
-        if (!stored) {
-          setTheme(e.matches ? "dark" : "light")
-        }
-      } catch (_:unknown) {
-        console.error(_)
-      }
+    } catch {
+      // localStorage unavailable (sandboxed iframe, private mode quota) — ignore
     }
-    mediaQuery.addEventListener("change", handleChange)
-    return () => mediaQuery.removeEventListener("change", handleChange)
-  }, [])
+  }, [theme])
 
   const toggleTheme = useCallback(() => {
     setTheme((t) => (t === "light" ? "dark" : "light"))
@@ -151,7 +124,7 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar activePage={state.page} onNavigate={handleNavigate} />
         <main>{renderPage()}</main>
         <Analytics />

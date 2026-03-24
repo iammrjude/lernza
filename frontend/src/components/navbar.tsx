@@ -45,11 +45,11 @@ function ThemeToggle() {
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}
       className={cn(
-        "relative w-9 h-9 border-2 border-black shadow-[2px_2px_0_#000]",
+        "relative w-9 h-9 border-2 border-border shadow-[2px_2px_0_#000]",
         "flex items-center justify-center neo-press cursor-pointer overflow-hidden",
         isDark
-          ? "bg-primary text-black hover:bg-yellow-300"
-          : "bg-white text-black hover:bg-secondary"
+          ? "bg-primary text-foreground hover:bg-yellow-300"
+          : "bg-background text-foreground hover:bg-secondary"
       )}
     >
       {/* Sun icon - visible in dark mode (click to go light) */}
@@ -84,7 +84,7 @@ export function Navbar({ activePage, onNavigate }: NavbarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b-[3px] border-black bg-background transition-colors duration-300">
+    <header className="sticky top-0 z-50 border-b-[3px] border-border bg-background transition-colors duration-300">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <button
@@ -104,8 +104,8 @@ export function Navbar({ activePage, onNavigate }: NavbarProps) {
               className={cn(
                 "px-4 py-2 text-sm font-bold transition-all cursor-pointer border-2 animated-underline",
                 activePage === item.key
-                  ? "bg-primary border-black shadow-[2px_2px_0_#000] active"
-                  : "border-transparent hover:border-black hover:bg-secondary"
+                  ? "bg-primary border-border shadow-[2px_2px_0_#000] active"
+                  : "border-transparent hover:border-border hover:bg-secondary"
               )}
             >
               {item.label}
@@ -119,8 +119,8 @@ export function Navbar({ activePage, onNavigate }: NavbarProps) {
 
           {connected ? (
             <>
-              <div className="hidden sm:flex items-center gap-2 border-2 border-black bg-secondary px-3 py-1.5 shadow-[2px_2px_0_#000]">
-                <div className="h-2.5 w-2.5 bg-success border border-black" />
+              <div className="hidden sm:flex items-center gap-2 border-2 border-border bg-secondary px-3 py-1.5 shadow-[2px_2px_0_#000]">
+                <div className="h-2.5 w-2.5 bg-success border border-border" />
                 <span className="text-sm font-mono font-bold">{shortAddress}</span>
               </div>
               <Button variant="ghost" size="icon" onClick={disconnect}>
@@ -142,7 +142,7 @@ export function Navbar({ activePage, onNavigate }: NavbarProps) {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="sm:hidden w-9 h-9 border-2 border-black bg-card shadow-[2px_2px_0_#000] flex items-center justify-center neo-press cursor-pointer"
+            className="sm:hidden w-9 h-9 border-2 border-border bg-card shadow-[2px_2px_0_#000] flex items-center justify-center neo-press cursor-pointer"
           >
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -151,7 +151,7 @@ export function Navbar({ activePage, onNavigate }: NavbarProps) {
 
       {/* Mobile menu dropdown */}
       {mobileOpen && (
-        <div className="sm:hidden border-t-[3px] border-black bg-background animate-fade-in-down transition-colors duration-300">
+        <div className="sm:hidden border-t-[3px] border-border bg-background animate-fade-in-down transition-colors duration-300">
           <div className="px-4 py-3 space-y-1">
             {NAV_ITEMS.map((item) => (
               <button
@@ -160,8 +160,8 @@ export function Navbar({ activePage, onNavigate }: NavbarProps) {
                 className={cn(
                   "w-full text-left px-4 py-3 text-sm font-bold transition-all cursor-pointer border-2",
                   activePage === item.key
-                    ? "bg-primary border-black shadow-[2px_2px_0_#000]"
-                    : "border-transparent hover:border-black hover:bg-secondary"
+                    ? "bg-primary border-border shadow-[2px_2px_0_#000]"
+                    : "border-transparent hover:border-border hover:bg-secondary"
                 )}
               >
                 {item.label}
