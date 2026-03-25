@@ -15,20 +15,20 @@ fn setup() -> (
 ) {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     // Register quest contract
     let quest_contract_id = env.register(QuestContract, ());
     let quest_client = QuestContractClient::new(&env, &quest_contract_id);
-    
+
     // Register milestone contract
     let milestone_contract_id = env.register(MilestoneContract, ());
     let milestone_client = MilestoneContractClient::new(&env, &milestone_contract_id);
-    
+
     let admin = Address::generate(&env);
-    
+
     // Initialize milestone contract with quest contract address
     milestone_client.initialize(&admin, &quest_contract_id);
-    
+
     (env, milestone_client, quest_client, admin)
 }
 
@@ -52,7 +52,7 @@ fn create_ms(
             &Address::generate(env), // token address
         );
     }
-    
+
     milestone_client.create_milestone(
         owner,
         &quest_id,
@@ -65,7 +65,15 @@ fn create_ms(
 #[test]
 fn test_create_milestone() {
     let (env, client, quest_client, owner) = setup();
-    let id = create_ms(&env, &client, &quest_client, &owner, 0, "Build your first API", 100);
+    let id = create_ms(
+        &env,
+        &client,
+        &quest_client,
+        &owner,
+        0,
+        "Build your first API",
+        100,
+    );
     assert_eq!(id, 0);
     assert_eq!(client.get_milestone_count(&0), 1);
 
@@ -121,7 +129,15 @@ fn test_get_milestones() {
 #[test]
 fn test_verify_completion() {
     let (env, client, quest_client, owner) = setup();
-    create_ms(&env, &client, &quest_client, &owner, 0, "Deploy a contract", 100);
+    create_ms(
+        &env,
+        &client,
+        &quest_client,
+        &owner,
+        0,
+        "Deploy a contract",
+        100,
+    );
 
     let enrollee = Address::generate(&env);
     let reward = client.verify_completion(&owner, &0, &0, &enrollee);
@@ -294,13 +310,15 @@ fn test_competitive_mode_counts_per_milestone() {
     assert_eq!(client.verify_completion(&owner, &0, &0, &e2), 0);
     // Milestone 1: e2 is the winner (fresh count)
     assert_eq!(client.verify_completion(&owner, &0, &1, &e2), 200);
+}
+
 // ---- Security tests ----
 
 /// CRIT-01: Any address that calls create_milestone first for a quest_id
 /// becomes the permanent milestone authority for that quest. The legitimate
 /// quest owner is locked out because the first caller sets the cached owner with
 /// no cross-contract validation against the quest contract.
-/// 
+///
 /// FIX: Now validates ownership via cross-contract call to quest contract.
 /// The attacker cannot seize authority because they don't own the quest.
 #[test]
@@ -324,7 +342,7 @@ fn test_milestone_ownership_race_condition() {
         &String::from_str(&env, "Description"),
         &9999,
     );
-    
+
     // Attack fails - attacker is not the quest owner
     assert_eq!(result, Err(Ok(Error::OwnerMismatch)));
 
@@ -342,7 +360,7 @@ fn test_milestone_ownership_race_condition() {
     let enrollee = Address::generate(&env);
     let reward = client.verify_completion(&legitimate_owner, &0, &0, &enrollee);
     assert_eq!(reward, 100);
-    
+
     // Attacker cannot verify completions
     let result = client.try_verify_completion(&attacker, &0, &0, &enrollee);
     assert_eq!(result, Err(Ok(Error::Unauthorized)));
