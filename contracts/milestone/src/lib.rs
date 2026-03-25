@@ -35,6 +35,8 @@ pub struct QuestInfo {
     pub owner: Address,
     pub name: String,
     pub description: String,
+    pub category: String,
+    pub tags: Vec<String>,
     pub token_addr: Address,
     pub created_at: u64,
     pub visibility: Visibility,
@@ -350,38 +352,40 @@ impl MilestoneContract {
             }
         };
 
-    // Mark completed
-    env.storage().persistent().set(&comp_key, &true);
-    env.storage()
-        .persistent()
-        .extend_ttl(&comp_key, THRESHOLD, BUMP);
+        // Mark completed
+        env.storage().persistent().set(&comp_key, &true);
+        env.storage()
+            .persistent()
+            .extend_ttl(&comp_key, THRESHOLD, BUMP);
 
-    // Store completion timestamp
-    let time_key = DataKey::CompletionTime(quest_id, milestone_id, enrollee.clone());
-    env.storage().persistent().set(&time_key, &env.ledger().timestamp());
-    env.storage()
-        .persistent()
-        .extend_ttl(&time_key, THRESHOLD, BUMP);
+        // Store completion timestamp
+        let time_key = DataKey::CompletionTime(quest_id, milestone_id, enrollee.clone());
+        env.storage()
+            .persistent()
+            .set(&time_key, &env.ledger().timestamp());
+        env.storage()
+            .persistent()
+            .extend_ttl(&time_key, THRESHOLD, BUMP);
 
-    // Increment enrollee's completion count for this quest
-    let count_key = DataKey::EnrolleeCompletions(quest_id, enrollee.clone());
-    let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
-    env.storage().persistent().set(&count_key, &(count + 1));
-    env.storage()
-        .persistent()
-        .extend_ttl(&count_key, THRESHOLD, BUMP);
+        // Increment enrollee's completion count for this quest
+        let count_key = DataKey::EnrolleeCompletions(quest_id, enrollee.clone());
+        let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
+        env.storage().persistent().set(&count_key, &(count + 1));
+        env.storage()
+            .persistent()
+            .extend_ttl(&count_key, THRESHOLD, BUMP);
 
-    // Update total earnings for enrollee
-    let earnings_key = DataKey::EnrolleeEarnings(quest_id, enrollee.clone());
-    let total_earned: i128 = env.storage().persistent().get(&earnings_key).unwrap_or(0);
-    env.storage()
-        .persistent()
-        .set(&earnings_key, &(total_earned + reward));
-    env.storage()
-        .persistent()
-        .extend_ttl(&earnings_key, THRESHOLD, BUMP);
+        // Update total earnings for enrollee
+        let earnings_key = DataKey::EnrolleeEarnings(quest_id, enrollee.clone());
+        let total_earned: i128 = env.storage().persistent().get(&earnings_key).unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&earnings_key, &(total_earned + reward));
+        env.storage()
+            .persistent()
+            .extend_ttl(&earnings_key, THRESHOLD, BUMP);
 
-    Ok(reward)
+        Ok(reward)
     }
 
     /// Submit a milestone completion for peer review.
@@ -636,11 +640,7 @@ impl MilestoneContract {
     }
 
     /// Get full progress details for an enrollee in a quest.
-    pub fn get_enrollee_progress(
-        env: Env,
-        quest_id: u32,
-        enrollee: Address,
-    ) -> EnrolleeProgress {
+    pub fn get_enrollee_progress(env: Env, quest_id: u32, enrollee: Address) -> EnrolleeProgress {
         let completions: u32 = env
             .storage()
             .persistent()
@@ -659,7 +659,11 @@ impl MilestoneContract {
 
         let mut completion_details = Vec::new(&env);
         for i in 0..total_milestones {
-            if env.storage().persistent().has(&DataKey::Completed(quest_id, i, enrollee.clone())) {
+            if env
+                .storage()
+                .persistent()
+                .has(&DataKey::Completed(quest_id, i, enrollee.clone()))
+            {
                 if let Some(ts) = env
                     .storage()
                     .persistent()
@@ -686,11 +690,7 @@ impl MilestoneContract {
     }
 
     /// Get quest completion rate (% of enrollees who completed all milestones).
-    pub fn get_quest_completion_rate(
-        env: Env,
-        quest_id: u32,
-        total_enrollees: u32,
-    ) -> i128 {
+    pub fn get_quest_completion_rate(env: Env, quest_id: u32, total_enrollees: u32) -> i128 {
         if total_enrollees == 0 {
             return 0;
         }
@@ -705,8 +705,8 @@ impl MilestoneContract {
             return 0;
         }
 
-        let mut fully_completed = 0u32;
-        for i in 0..total_milestones {
+        let fully_completed = 0u32;
+        for _i in 0..total_milestones {
             // Count enrollees who completed this milestone
             // This is a simplified approach - in production we'd need to iterate over enrollees
             // For now, return a placeholder based on available data

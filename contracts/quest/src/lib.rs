@@ -28,6 +28,8 @@ pub struct QuestInfo {
     pub owner: Address,
     pub name: String,
     pub description: String,
+    pub category: String,
+    pub tags: Vec<String>,
     pub token_addr: Address,
     pub created_at: u64,
     pub visibility: Visibility,
@@ -47,6 +49,8 @@ pub enum Error {
 
 const BUMP: u32 = 518_400;
 const THRESHOLD: u32 = 120_960;
+const MAX_TAGS: u32 = 5;
+const MAX_TAG_LEN: u32 = 32;
 
 #[contract]
 pub struct QuestContract;
@@ -54,15 +58,20 @@ pub struct QuestContract;
 #[contractimpl]
 impl QuestContract {
     /// Create a new quest. Returns the quest ID.
+    #[allow(clippy::too_many_arguments)]
     pub fn create_quest(
         env: Env,
         owner: Address,
         name: String,
         description: String,
+        category: String,
+        tags: Vec<String>,
         token_addr: Address,
         visibility: Visibility,
     ) -> Result<u32, Error> {
         owner.require_auth();
+
+        Self::validate_tags(&tags)?;
 
         let id: u32 = env.storage().instance().get(&DataKey::NextId).unwrap_or(0);
 
@@ -71,6 +80,8 @@ impl QuestContract {
             owner,
             name,
             description,
+            category,
+            tags,
             token_addr,
             created_at: env.ledger().timestamp(),
             visibility,
@@ -215,18 +226,21 @@ impl QuestContract {
         public_quests
     }
 
-    /// Set enrollment cap for a quest. Owner only.
-    pub fn set_enrollment_cap(env: Env, quest_id: u32, max_enrollees: u32) -> Result<(), Error> {
-        let quest = Self::load_quest(&env, quest_id)?;
-        quest.owner.require_auth();
+    /// Get all public quests within a category.
+    pub fn get_quests_by_category(env: Env, category: String) -> Vec<QuestInfo> {
+        let total_count: u32 = env.storage().instance().get(&DataKey::NextId).unwrap_or(0);
+        let mut matches = Vec::new(&env);
 
-        env.storage()
-            .persistent()
-            .set(&DataKey::EnrollmentCap(quest_id), &max_enrollees);
-        env.storage()
-            .persistent()
-            .extend_ttl(&DataKey::EnrollmentCap(quest_id), THRESHOLD, BUMP);
-        Ok(())
+        for i in 0..total_count {
+            if let Ok(quest) = Self::load_quest(&env, i) {
+                if quest.visibility == Visibility::Public && quest.category == category {
+                    matches.push_back(quest);
+                }
+            }
+        }
+
+        env.storage().instance().extend_ttl(THRESHOLD, BUMP);
+        matches
     }
 
     /// Get enrollment cap for a quest.
@@ -251,6 +265,21 @@ impl QuestContract {
             .persistent()
             .get(&DataKey::Enrollees(id))
             .unwrap_or(Vec::new(env))
+    }
+
+    fn validate_tags(tags: &Vec<String>) -> Result<(), Error> {
+        if tags.len() > MAX_TAGS {
+            return Err(Error::InvalidInput);
+        }
+
+        for i in 0..tags.len() {
+            let tag = tags.get(i).ok_or(Error::InvalidInput)?;
+            if tag.is_empty() || tag.len() > MAX_TAG_LEN {
+                return Err(Error::InvalidInput);
+            }
+        }
+
+        Ok(())
     }
 
     fn bump(env: &Env, quest_id: u32) {
