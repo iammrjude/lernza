@@ -31,7 +31,8 @@ fn setup() -> (
     // Deploy rewards contract
     let contract_id = env.register(RewardsContract, ());
     let client = RewardsContractClient::new(&env, &contract_id);
-    client.initialize(&token_addr, &quest_id);
+    let admin = Address::generate(&env);
+    client.initialize(&admin, &token_addr, &quest_id);
 
     (env, client, contract_id, token_addr, quest_client, quest_id)
 }
@@ -46,8 +47,9 @@ fn test_initialize() {
 #[test]
 fn test_initialize_twice_fails() {
     let (env, client, _cid, _token_addr, _ws, quest_id) = setup();
+    let admin = Address::generate(&env);
     let fake_token = Address::generate(&env);
-    let result = client.try_initialize(&fake_token, &quest_id);
+    let result = client.try_initialize(&admin, &fake_token, &quest_id);
     assert_eq!(result, Err(Ok(Error::AlreadyInitialized)));
 }
 
@@ -277,15 +279,25 @@ fn test_initialize_no_auth_guard() {
     let contract_id = env.register(RewardsContract, ());
     let client = RewardsContractClient::new(&env, &contract_id);
 
-    // Any random address can initialize ΓÇö no deployer auth required
+    // Any random address can initialize — no deployer auth required
+    let attacker = Address::generate(&env);
     let attacker_token = Address::generate(&env);
-    client.initialize(&attacker_token, &quest_id);
+    
+    // This will now FAIL because attackers address is not authorized
+    // (mock_all_auths only mocks for addresses that are NOT generates in some contexts, 
+    // but here we want to prove it requires auth)
+    let result = client.try_initialize(&attacker, &attacker_token, &quest_id);
+    assert!(result.is_err());
 
-    assert_eq!(client.get_token(), attacker_token);
-
-    // Legitimate deployer cannot override it
+    // Legitimate admin can initialize
+    let admin = Address::generate(&env);
     let real_token = Address::generate(&env);
-    let result = client.try_initialize(&real_token, &quest_id);
+    client.initialize(&admin, &real_token, &quest_id);
+
+    assert_eq!(client.get_token(), real_token);
+
+    // Cannot override it
+    let result = client.try_initialize(&admin, &real_token, &quest_id);
     assert_eq!(result, Err(Ok(Error::AlreadyInitialized)));
 }
 

@@ -39,6 +39,7 @@ pub trait QuestContractTrait {
 #[derive(Clone)]
 pub enum DataKey {
     TokenAddr,
+    Admin,
     QuestContractAddr,
     // Who funded / controls a quest's pool
     QuestAuthority(u32),
@@ -74,12 +75,16 @@ impl RewardsContract {
     /// and the quest contract address for ownership verification.
     pub fn initialize(
         env: Env,
+        admin: Address,
         token_addr: Address,
         quest_contract_addr: Address,
     ) -> Result<(), Error> {
+        admin.require_auth();
+
         if env.storage().instance().has(&DataKey::TokenAddr) {
             return Err(Error::AlreadyInitialized);
         }
+        env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage()
             .instance()
             .set(&DataKey::TokenAddr, &token_addr);
