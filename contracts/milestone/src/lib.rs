@@ -929,4 +929,5 @@ impl MilestoneContract {
     }
 }
 
+#[cfg(test)]
 mod test;

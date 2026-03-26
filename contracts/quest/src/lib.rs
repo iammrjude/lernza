@@ -560,4 +560,5 @@ impl QuestContract {
     }
 }
 
+#[cfg(test)]
 mod test;
