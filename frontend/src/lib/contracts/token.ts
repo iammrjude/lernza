@@ -121,15 +121,21 @@ export class TokenClient {
   }
 
   /**
-   * Get the token contract address
+   * Get the token contract address.
+   * Throws if no address is provided via constructor or environment.
    */
   private getContractAddress(): string {
-    return (
+    const addr =
       this.tokenAddress ||
       import.meta.env.VITE_REWARDS_TOKEN_CONTRACT_ID ||
-      import.meta.env.VITE_USDC_TOKEN_ADDRESS ||
-      ""
-    )
+      import.meta.env.VITE_USDC_TOKEN_ADDRESS
+
+    if (!addr) {
+      throw new Error(
+        "Token address not configured. Set VITE_REWARDS_TOKEN_CONTRACT_ID or VITE_USDC_TOKEN_ADDRESS."
+      )
+    }
+    return addr
   }
 
   /**
